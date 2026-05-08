@@ -1,57 +1,80 @@
 import streamlit as st
 
-st.title("セルフレジUI改善プロジェクト")
+st.set_page_config(page_title="UI改善デモ", layout="wide")
 
-mode = st.sidebar.selectbox("表示を選択", ["改善前UI", "改善後UI"])
+st.title("UI改善デモ：セルフレジ比較")
 
-# =========================
+mode = st.radio("表示モードを選択", ["改善前（使いにくいUI）", "改善後（改善UI）"])
+
+
+# -------------------------
 # 改善前UI
-# =========================
-if mode == "改善前UI":
+# -------------------------
+if mode == "改善前（使いにくいUI）":
+    st.header("セルフレジ（改善前）")
 
-    st.header("改善前UI（問題のある設計）")
+    st.write("※どれを押せばいいか分かりにくいUI")
 
-    st.subheader("操作1")
-    st.text_input("商品コード入力してください")
-    st.button("OK")
+    col1, col2, col3 = st.columns(3)
 
-    st.subheader("操作2")
-    st.text_input("支払い方法コード？")
-    st.button("進む？")
+    with col1:
+        if st.button("商品スキャン"):
+            st.error("エラー：次の操作が不明です")
 
-    st.subheader("操作3")
-    st.text_input("これでいい？")
-    st.button("確定")
+        if st.button("会計"):
+            st.warning("支払い方法を先に選択してください")
 
-    st.error("問題点：操作手順が不明確・説明不足・誤操作が起きやすい")
+    with col2:
+        if st.button("ポイント利用"):
+            st.warning("ポイント残高が不明です")
 
-# =========================
+        if st.button("クーポン入力"):
+            st.error("入力形式が違います")
+
+    with col3:
+        if st.button("ヘルプ"):
+            st.info("どこを押せばいいか分かりません")
+
+    st.write("👉 問題点：情報が分散していて操作の順番が分からない")
+
+
+# -------------------------
 # 改善後UI
-# =========================
-elif mode == "改善後UI":
+# -------------------------
+else:
+    st.header("セルフレジ（改善後）")
 
-    st.header("改善後UI（改善設計）")
+    st.write("※1ステップずつ進むガイド型UI")
 
-    step = st.radio(
-        "操作ステップを選択",
-        ["① 商品スキャン", "② 袋選択", "③ 支払い", "④ 完了"]
-    )
+    step = st.session_state.get("step", 1)
 
-    if step == "① 商品スキャン":
-        st.subheader("商品スキャン")
-        code = st.text_input("バーコードを入力")
-        if code:
-            st.success("商品を追加しました")
+    if step == 1:
+        st.subheader("① 商品をスキャンしてください")
+        if st.button("スキャン完了"):
+            st.session_state.step = 2
+            st.rerun()
 
-    elif step == "② 袋選択":
-        st.subheader("袋の選択")
-        bag = st.selectbox("サイズを選んでください", ["不要", "小", "中", "大"])
-        st.info(f"選択中：{bag}")
+    elif step == 2:
+        st.subheader("② 支払い方法を選択")
+        payment = st.selectbox("支払い方法", ["現金", "クレジットカード", "QR決済"])
+        if st.button("次へ"):
+            st.session_state.step = 3
+            st.rerun()
 
-    elif step == "③ 支払い":
-        st.subheader("支払い方法")
-        pay = st.radio("方法を選択", ["現金", "クレジットカード", "QRコード"])
-        st.success(f"{pay} が選択されました")
+    elif step == 3:
+        st.subheader("③ クーポン・ポイント（任意）")
+        use_coupon = st.checkbox("クーポンを使う")
+        use_point = st.checkbox("ポイントを使う")
 
-    elif step == "④ 完了":
-        st.success("会計が完了しました！ありがとうございました")
+        if st.button("会計へ進む"):
+            st.session_state.step = 4
+            st.rerun()
+
+    elif step == 4:
+        st.subheader("④ 会計完了")
+        st.success("支払いが完了しました！ありがとうございました")
+        if st.button("最初に戻る"):
+            st.session_state.step = 1
+            st.rerun()
+
+    st.write("👉 改善点：操作が順番化され、迷わないUI")
