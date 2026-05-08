@@ -1,138 +1,155 @@
 import streamlit as st
-import random
 
 st.set_page_config(page_title="セルフレジUI比較", layout="wide")
 
 # -----------------------------
-# ダミー商品
+# 初期化
 # -----------------------------
-PRODUCTS = [
-    {"name": "おにぎり（鮭）", "price": 140},
-    {"name": "おにぎり（ツナマヨ）", "price": 150},
-    {"name": "ペットボトルお茶", "price": 120},
-    {"name": "カップラーメン", "price": 230},
-    {"name": "サンドイッチ", "price": 320},
-    {"name": "チョコレート", "price": 180},
-]
+if "mode" not in st.session_state:
+    st.session_state.mode = "bad"
+
+if "page" not in st.session_state:
+    st.session_state.page = "home"
 
 if "cart" not in st.session_state:
     st.session_state.cart = []
 
-if "step" not in st.session_state:
-    st.session_state.step = "select"
 
-def cart_total():
-    return sum(item["price"] for item in st.session_state.cart)
+PRODUCTS = [
+    ("おにぎり", 140),
+    ("サンドイッチ", 320),
+    ("お茶", 120),
+    ("カップ麺", 230),
+]
 
 
-st.title("コンビニセルフレジUI改善デモ（リアル版）")
+def go(page):
+    st.session_state.page = page
+    st.rerun()
 
-mode = st.radio("表示モード", ["改善前UI（混乱する実機風）", "改善後UI（設計改善版）"])
+
+# -----------------------------
+# モード切替
+# -----------------------------
+st.sidebar.title("UI切替")
+mode = st.sidebar.radio("表示", ["改善前UI（悪い設計）", "改善後UI（良い設計）"])
+
+st.session_state.mode = "bad" if "改善前" in mode else "good"
+
+if st.sidebar.button("リセット"):
+    st.session_state.page = "home"
+    st.session_state.cart = []
+    st.rerun()
 
 
 # =====================================================
-# 改善前UI（リアルに“ごちゃついた実機風”）
+# ■ 改善前UI（悪い設計：混乱型）
 # =====================================================
-if mode == "改善前UI（混乱する実機風）":
-    st.subheader("セルフレジ画面（旧型）")
+if st.session_state.mode == "bad":
 
-    col1, col2, col3 = st.columns([2, 2, 1])
+    st.title("セルフレジ（改善前UI）")
+
+    st.write("※全部が同じ画面にあり、操作順が分かりにくい")
+
+    col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown("### 商品一覧（スクロール）")
-        for p in PRODUCTS:
-            if st.button(f"{p['name']} ¥{p['price']}"):
-                st.session_state.cart.append(p)
+        st.subheader("商品（バラバラ操作）")
+        for name, price in PRODUCTS:
+            if st.button(f"{name} ¥{price}"):
+                st.session_state.cart.append((name, price))
 
     with col2:
-        st.markdown("### 操作メニュー（多すぎる問題）")
-        if st.button("ポイントカード読み取り"):
-            st.warning("カード未検出")
-        if st.button("クーポン読取"):
-            st.error("読み取り失敗")
-        if st.button("支払いへ進む"):
-            st.info("支払い方法未選択です")
-        if st.button("レシート設定"):
-            st.write("設定画面（複雑）")
-        if st.button("ヘルプ"):
-            st.write("説明が長すぎて読まれない")
+        st.subheader("操作メニュー（多すぎ）")
+        st.button("ポイントカード読み取り")
+        st.button("クーポン入力")
+        st.button("レシート設定")
+        st.button("支払い")
+        st.button("ヘルプ")
 
-    with col3:
-        st.markdown("### カート")
-        if st.session_state.cart:
-            for i, item in enumerate(st.session_state.cart):
-                st.write(f"{item['name']} - ¥{item['price']}")
-        else:
-            st.write("空")
+    st.markdown("---")
+    st.subheader("カート")
+    for item in st.session_state.cart:
+        st.write(f"{item[0]} - ¥{item[1]}")
 
-        st.markdown(f"**合計：¥{cart_total()}**")
-
-        if st.button("会計（未整理状態）"):
-            st.error("エラー：手順が不明確")
-
-
-    st.info("問題点：情報が同時に出すぎて“どこを見ればいいか分からない”")
+    st.write(f"合計：¥{sum(p for _, p in st.session_state.cart)}")
 
 
 # =====================================================
-# 改善後UI（実在レジに寄せた設計）
+# ■ 改善後UI（良い設計：画面遷移型）
 # =====================================================
 else:
-    st.subheader("セルフレジ画面（改善版）")
 
-    col1, col2 = st.columns([3, 2])
+    st.title("セルフレジ（改善後UI）")
 
-    # -------------------------
-    # 左：商品スキャンエリア
-    # -------------------------
-    with col1:
-        st.markdown("## スキャン（商品登録）")
+    # -----------------------------
+    # ホーム
+    # -----------------------------
+    if st.session_state.page == "home":
+        st.write("ようこそ。スキャンを開始してください。")
 
-        st.caption("商品をタップするとスキャンされます")
+        if st.button("開始"):
+            go("scan")
 
-        for p in PRODUCTS:
-            if st.button(f"＋ {p['name']}（¥{p['price']}）"):
-                st.session_state.cart.append(p)
+    # -----------------------------
+    # スキャン
+    # -----------------------------
+    elif st.session_state.page == "scan":
 
-        st.markdown("---")
+        st.subheader("スキャン画面")
 
-        st.markdown("### カート内容")
-        if st.session_state.cart:
-            for i, item in enumerate(st.session_state.cart):
-                c1, c2 = st.columns([3, 1])
-                with c1:
-                    st.write(f"{item['name']}")
-                with c2:
-                    st.write(f"¥{item['price']}")
-        else:
-            st.write("商品がまだありません")
+        for name, price in PRODUCTS:
+            if st.button(f"＋ {name} ¥{price}"):
+                st.session_state.cart.append((name, price))
 
+        if st.button("カートへ進む"):
+            go("cart")
 
-    # -------------------------
-    # 右：決済エリア（固定UI風）
-    # -------------------------
-    with col2:
-        st.markdown("## 決済パネル")
+        if st.button("戻る"):
+            go("home")
 
-        st.metric("合計金額", f"¥{cart_total()}")
+    # -----------------------------
+    # カート
+    # -----------------------------
+    elif st.session_state.page == "cart":
 
-        st.markdown("### 支払い方法")
-        pay = st.radio("", ["現金", "クレジットカード", "QR決済"], index=0)
+        st.subheader("カート確認")
 
-        st.markdown("### オプション")
-        coupon = st.checkbox("クーポン使用")
-        point = st.checkbox("ポイント使用")
+        for name, price in st.session_state.cart:
+            st.write(f"{name} - ¥{price}")
 
-        st.markdown("---")
+        st.write(f"合計：¥{sum(p for _, p in st.session_state.cart)}")
 
-        if st.button("▶ 支払い確定"):
-            if len(st.session_state.cart) == 0:
-                st.error("商品がありません")
-            else:
-                st.success("支払い完了（実機イメージ）")
-                st.session_state.cart = []
+        if st.button("支払いへ"):
+            go("pay")
 
-        if st.button("リセット"):
+        if st.button("スキャンに戻る"):
+            go("scan")
+
+    # -----------------------------
+    # 支払い
+    # -----------------------------
+    elif st.session_state.page == "pay":
+
+        st.subheader("支払い")
+
+        st.write(f"合計金額：¥{sum(p for _, p in st.session_state.cart)}")
+
+        method = st.radio("支払い方法", ["現金", "カード", "QR決済"])
+
+        if st.button("支払い確定"):
             st.session_state.cart = []
+            go("done")
 
-    st.info("改善点：①導線を左→右に固定 ②操作を決済に集約 ③情報密度を整理")
+        if st.button("戻る"):
+            go("cart")
+
+    # -----------------------------
+    # 完了
+    # -----------------------------
+    elif st.session_state.page == "done":
+
+        st.success("支払い完了")
+
+        if st.button("最初へ"):
+            go("home")
